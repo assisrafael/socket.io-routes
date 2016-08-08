@@ -55,12 +55,14 @@ s.route('event')
   });
 ```
 
-And you can also validate data using `node-validator`:
+And you can also validate data using [node-validator](https://github.com/chriso/validator.js):
 
 ```JavaScript
 s.route('event')
-  .validate({ //optional
-    email: 'isEmail'
+  .validate({
+    email: {
+      isEmail: {},
+      isLowercase: true
   })
   .process(function(data) {
     return doSomething();

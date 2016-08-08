@@ -188,3 +188,52 @@ test.cb('should raise an error when authentication fail', t => {
 		sioc.emit('msg', 'message');
 	});
 });
+
+
+test.cb('should validate data', t => {
+	t.plan(2);
+	let srv = http();
+	let sio = io(srv);
+
+	sio.use(routes);
+
+	srv.listen(() => {
+		let sioc = client(srv);
+		sio.on('connection', function(s) {
+			s.route('validEmail')
+				.validate({
+					email: {
+						isEmail: {}
+					}
+				})
+				.process(function(data) {
+					t.is(data.email, 'test@emailaddresstest.com');
+				});
+
+			s.on('error', function(err) {
+				t.pass();
+				t.end();
+			});
+
+			s.route('invalidEmail')
+				.validate({
+					email: {
+						isEmail: {}
+					}
+				})
+				.process(function(data) {
+					t.fail();
+				});
+		});
+
+		sioc.emit('validEmail', {
+			email: 'test@emailaddresstest.com'
+		});
+
+		setTimeout(function() {
+			sioc.emit('invalidEmail', {
+				email: 'test @ 1234'
+			});
+		}, 100);
+	});
+});
