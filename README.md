@@ -9,7 +9,7 @@ An alternative API for writing socket.io event handlers
 
 ```JavaScript
 const io = require('socket.io');
-const routes = require('socket.io-routes);
+const routes = require('socket.io-routes');
 //...
 io.use(routes);
 
