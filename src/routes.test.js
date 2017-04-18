@@ -33,7 +33,6 @@ test('should export a function', t => {
 	t.is(typeof routes, 'function');
 });
 
-
 test.cb('should check if it will generate a collision with a builtin name', t => {
 	t.plan(1);
 	let srv = http();
@@ -189,7 +188,6 @@ test.cb('should raise an error when authentication fail', t => {
 	});
 });
 
-
 test.cb('should validate data', t => {
 	t.plan(2);
 	let srv = http();
@@ -235,5 +233,46 @@ test.cb('should validate data', t => {
 				email: 'test @ 1234'
 			});
 		}, 100);
+	});
+});
+
+test.cb('should log events', t => {
+	t.plan(5);
+	let srv = http();
+	let sio = io(srv);
+
+	sio.use(routes);
+
+	srv.listen(() => {
+		let sioc = client(srv);
+		sio.on('connection', function(s) {
+			s.route('login')
+				.log((event, data, err, elapsedTime) => {
+					t.is(event, 'login');
+					t.deepEqual(data, {
+						email: 'test@emailaddresstest.com'
+					});
+					t.falsy(err);
+					t.truthy(elapsedTime);
+					t.end();
+				})
+				.validate({
+					email: {
+						isEmail: {}
+					}
+				})
+				.process(function(data) {
+					t.is(data.email, 'test@emailaddresstest.com');
+				});
+
+			s.on('error', function(err) {
+				t.pass();
+				t.end();
+			});
+		});
+
+		sioc.emit('login', {
+			email: 'test@emailaddresstest.com'
+		});
 	});
 });
