@@ -89,6 +89,29 @@ test.cb('should handle an event', t => {
 	});
 });
 
+test.cb('should handle promise rejection', t => {
+	t.plan(1);
+	let srv = http();
+	let sio = io(srv);
+
+	sio.use(routes);
+
+	srv.listen(() => {
+		let sioc = client(srv);
+		sio.on('connection', function(s) {
+			s.route('msg')
+				.process(function(data) {
+					throw new Error('Invalid message');
+				});
+		});
+
+		sioc.emit('msg', 'message', (err) => {
+			t.is(err.message, 'Invalid message');
+			t.end();
+		});
+	});
+});
+
 test.cb('should handle an event with a callback', t => {
 	t.plan(3);
 	let srv = http();
@@ -188,6 +211,38 @@ test.cb('should raise an error when authentication fail', t => {
 	});
 });
 
+test.cb('should catch an authentication error', t => {
+	t.plan(1);
+	let srv = http();
+	let sio = io(srv);
+
+	sio.use(routes);
+	sio.use(authenticateMiddleware);
+
+	srv.listen(() => {
+		let sioc = client(srv, {
+			query: {
+				token: '123456'
+			}
+		});
+
+		sio.on('connection', function(s) {
+			s.route('msg')
+				.auth({
+					isAuthenticated: true
+				})
+				.process(function(data) {
+					t.fail();
+				});
+		});
+
+		sioc.emit('msg', 'message', (err) => {
+			t.is(err.message, 'Not authorized');
+			t.end();
+		});
+	});
+});
+
 test.cb('should validate data', t => {
 	t.plan(2);
 	let srv = http();
@@ -233,6 +288,36 @@ test.cb('should validate data', t => {
 				email: 'test @ 1234'
 			});
 		}, 100);
+	});
+});
+
+test.cb('should send an error when data is invalid', t => {
+	t.plan(1);
+	let srv = http();
+	let sio = io(srv);
+
+	sio.use(routes);
+
+	srv.listen(() => {
+		let sioc = client(srv);
+		sio.on('connection', function(s) {
+			s.route('invalidEmail')
+				.validate({
+					email: {
+						isEmail: {}
+					}
+				})
+				.process(function(data) {
+					t.fail();
+				});
+		});
+
+		sioc.emit('invalidEmail', {
+			email: 'test @ 1234'
+		}, (err) => {
+			t.is(err.message, 'Invalid data');
+			t.end();
+		});
 	});
 });
 

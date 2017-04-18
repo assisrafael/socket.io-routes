@@ -9,6 +9,14 @@ function getElapsedTime(start) {
 	return prettyHrtime(end);
 }
 
+function err2Json(err) {
+	return {
+		message: err.message,
+		name: err.name,
+		stack: err.stack
+	};
+}
+
 module.exports = function setupSocketRoute(socket, next) {
 	socket.route = function(routePath) {
 		let validate = () => true;
@@ -51,14 +59,14 @@ module.exports = function setupSocketRoute(socket, next) {
 					if (!authenticate()) {
 						let err = new Error('Not authorized');
 						loggerFn(routePath, data, err, getElapsedTime(start));
-						return fn ? fn(err) : socket.emit('error', err);
+						return fn ? fn(err2Json(err)) : socket.emit('error', err);
 					}
 
 					let validationReturn = validate(data);
 					if (!validationReturn || typeof validationReturn === 'object') {
-						let err = validationReturn;
+						let err = !validationReturn ? new Error('Invalid data') : validationReturn;
 						loggerFn(routePath, data, err, getElapsedTime(start));
-						return fn ? fn(err) : socket.emit('error', err);
+						return fn ? fn(err2Json(err)) : socket.emit('error', err);
 					}
 
 					(new Promise((resolve) => {
@@ -73,7 +81,7 @@ module.exports = function setupSocketRoute(socket, next) {
 					}, (err) => {
 						loggerFn(routePath, data, err, getElapsedTime(start));
 						if (typeof fn !== 'undefined') {
-							fn(err);
+							fn(err2Json(err));
 						}
 					});
 				});
